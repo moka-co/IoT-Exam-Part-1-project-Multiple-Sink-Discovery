@@ -1,70 +1,69 @@
-//Variable parameter
-set sensitivity 0.77
-int drssi_threshold_min 15
-int drssi_threshold_max 48
+mark 0
+
+//Algorithm Parameters
+set sensitivity 0.67
+int rssi_min 15
+int rssi_max 65
 
 //Get Neighbours
 atnd n_neigh v
 
 //Set variables
-int partial_sum n_neigh
-int counter 1
+set partial_sum n_neigh
+int counter n_neigh
 int average 1
-int drssi_score 0
+int rssi_score 0
 set nn 0
 
 //Send number of neighbors to neighbors
 send n_neigh
-
 //Loop
 loop
-
 
 //Receive in broadcast the number of neighbors from neighbors
 //and read drssi from latest neighbor
 receive nn
-drssi read_drssi
+drssi read_rssi
 
-set temp5 drssi_score
-set temp6 read_drssi
-set drssi_score (temp5+temp6)
+int temp1 rssi_score
+int temp2 read_rssi
+set rssi_score (temp1+temp2)
 
 
 if(nn>=0)
-	inc counter //increase the counter of received messages
-
+	dec counter //decrese after each received messages
 	int temp1 nn
 	int temp2 partial_sum
 	set partial_sum (temp1+temp2)
 end
 
-//Compute average
-int temp1 partial_sum
-int temp2 counter
-set temp3 temp1/temp2
-int average temp3
+if(counter==0)
+	//Compute average
+	int temp1 partial_sum
+	int temp2 n_neigh
+	set temp3 (temp1/temp2)
+	int average temp3
+
+	
+	//Compute a portion of the average
+	set temp1 average*sensitivity
+	int paverage temp1
 
 
-//Compute a portion of the average
-set temp4 average*sensitivity
-int paverage temp4
+	//Compute the DRSSI score as the sum of DRSSI divided by n_neigh
+	int temp1 rssi_score
+	int temp2 n_neigh
+	set avg_rssi_score temp1/temp2
 
+	//Debug
+	//print "rssi_score=" avg_rssi_score " n_neigh=" n_neigh " pdaverage=" paverage 
 
-//Compute the DRSSI score as the sum of DRSSI divided by n_neigh
-int temp7 drssi_score
-int temp8 counter
-set temp9 temp7/temp8
-
-//Print drssi score, number of neighbors and portion of the average
-//print "drssi_score=" temp9 " n_neigh=" n_neigh " tdaverage=" temp4
-
-//Check if the number of neighbors is less than "paverage"
-//and if it's between the two drssi thresholds
-if((n_neigh<=paverage)&&(temp9>drssi_threshold_min)&&(temp9<drssi_threshold_max))
-	mark 1
-else
-	mark 0
+	//Check if the number of neighbors is less than "paverage"
+	//and if it's between the two drssi thresholds
+	if((n_neigh<paverage)&&(avg_rssi_score>rssi_min)&&(avg_rssi_score<rssi_max))
+		mark 1
+	end
+	stop
 end
 
-
-delay 1000
+delay 500
